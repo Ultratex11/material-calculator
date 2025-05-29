@@ -1,0 +1,187 @@
+import base64
+
+# Read and encode the provided logo image
+logo_path = "/mnt/data/Screenshot 2025-05-29 100045.png"
+with open(logo_path, "rb") as img_file:
+    logo_b64 = base64.b64encode(img_file.read()).decode('utf-8')
+
+# Updated HTML content with two polysheet options: 3 sqm or 6 sqm
+html_code = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ultratex Material Calculator</title>
+  <style>
+    body {{
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      background: white;
+    }}
+    h1 {{
+      text-align: center;
+      color: #d71920;
+    }}
+    .ultratex-logo {{
+      display: block;
+      margin: 0 auto 10px;
+      max-width: 250px;
+    }}
+    .input-group {{
+      margin-top: 15px;
+    }}
+    label {{
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 600;
+    }}
+    select, input[type="number"] {{
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }}
+    .note {{
+      font-size: 14px;
+      color: #666;
+      margin-top: 5px;
+    }}
+    button {{
+      margin-top: 25px;
+      padding: 12px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #d71920;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      width: 100%;
+    }}
+    .results {{
+      margin-top: 30px;
+      background: #fafafa;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }}
+    .results h3 {{
+      color: #d71920;
+    }}
+  </style>
+</head>
+<body>
+
+<img src="data:image/png;base64,{logo_b64}" alt="Ultratex Logo" class="ultratex-logo">
+<h1>Ultratex Material Calculator</h1>
+
+<div class="input-group">
+  <label><input type="radio" name="mode" id="modeArea" value="area" onclick="toggleMode()" checked> Enter Total Area (m²)</label>
+  <label><input type="radio" name="mode" id="modeDims" value="dims" onclick="toggleMode()"> Enter Dimensions (Width × Height)</label>
+</div>
+
+<div id="areaInput" class="input-group">
+  <label for="totalArea">Total Wall Area (m²):</label>
+  <input type="number" id="totalArea" placeholder="e.g. 24.5">
+</div>
+
+<div id="dimInputs" class="input-group" style="display:none;">
+  <label for="wallWidth">Wall Width (m):</label>
+  <input type="number" id="wallWidth" placeholder="e.g. 7.0">
+  <label for="wallHeight">Wall Height (m):</label>
+  <input type="number" id="wallHeight" placeholder="e.g. 3.5">
+</div>
+
+<div class="input-group">
+  <label for="sheetOption">Polystyrene Sheet Size:</label>
+  <select id="sheetOption">
+    <option value="3">1.2 m × 2.5 m (3 m² per sheet)</option>
+    <option value="6">1.2 m × 5 m (6 m² per sheet)</option>
+  </select>
+</div>
+
+<button onclick="calculate()">Calculate</button>
+
+<div class="results" id="results" style="display:none;">
+  <h3>Results:</h3>
+  <p><strong>Total Wall Area:</strong> <span id="area"></span> m²</p>
+  <p><strong>Polystyrene Sheets Required:</strong> <span id="sheets"></span></p>
+  <p><strong>Boxes of Screws (250 per box):</strong> <span id="screws"></span></p>
+  <p><strong>Boxes of Washers (500 per box):</strong> <span id="washers"></span></p>
+  <h4>Material Quantities:</h4>
+  <div id="materials"></div>
+</div>
+
+<script>
+function toggleMode() {{
+  document.getElementById('areaInput').style.display = document.getElementById('modeArea').checked ? 'block' : 'none';
+  document.getElementById('dimInputs').style.display = document.getElementById('modeDims').checked ? 'block' : 'none';
+}}
+
+function calculate() {{
+  let wallArea;
+  if (document.getElementById('modeArea').checked) {{
+    wallArea = parseFloat(document.getElementById('totalArea').value);
+  }} else {{
+    const width = parseFloat(document.getElementById('wallWidth').value);
+    const height = parseFloat(document.getElementById('wallHeight').value);
+    wallArea = width * height;
+  }}
+
+  const sheetArea = parseFloat(document.getElementById('sheetOption').value);
+  const screwsPerSheet = 6;
+  const washersPerSheet = 6;
+  const materialsCoverage = {{
+    "Render (20kg bag)": {{min:4, max:5, unit:"bag(s)"}},
+    "Hi-Build (20kg bag)": {{min:3, max:4, unit:"bag(s)"}},
+    "EPS Patch (20kg bag)": {{min:4.5, max:5, unit:"bag(s)"}},
+    "Bucket Patch (bucket)": {{min:10, max:12, unit:"bucket(s)"}},
+    "Concrete Finish (20kg bag)": {{min:20, max:20, unit:"bag(s)"}},
+    "Dry Texture (20kg bag)": {{min:10, max:12, unit:"bag(s)"}},
+    "Fine Texture (15L bucket)": {{min:14, max:15, unit:"bucket(s)"}},
+    "Medium Texture (15L bucket)": {{min:11, max:12.5, unit:"bucket(s)"}},
+    "Membrane (15L bucket)": {{min:45, max:50, unit:"bucket(s)"}}
+  }};
+
+  const sheets = Math.ceil((wallArea / sheetArea) * 1.05);
+  const screwBoxes = Math.ceil((sheets * screwsPerSheet) / 250);
+  const washerBoxes = Math.ceil((sheets * washersPerSheet) / 500);
+
+  document.getElementById('area').textContent = wallArea.toFixed(2);
+  document.getElementById('sheets').textContent = sheets;
+  document.getElementById('screws').textContent = screwBoxes + " box(es)";
+  document.getElementById('washers').textContent = washerBoxes + " box(es)";
+
+  const materialsDiv = document.getElementById('materials');
+  materialsDiv.innerHTML = '';
+  for (const [name, cov] of Object.entries(materialsCoverage)) {{
+    const minCount = Math.ceil(wallArea / cov.max);
+    const maxCount = Math.ceil(wallArea / cov.min);
+    const text = minCount === maxCount ?
+      `${{minCount}} ${{cov.unit}}` :
+      `${{minCount}}–${{maxCount}} ${{cov.unit}}`;
+    const p = document.createElement('p');
+    p.innerHTML = `<strong>${{name}}:</strong> ${{text}}`;
+    materialsDiv.appendChild(p);
+  }}
+
+  document.getElementById('results').style.display = 'block';
+}}
+</script>
+
+</body>
+</html>
+"""
+
+# Save the updated HTML file
+file_path = "/mnt/data/ultratex-material-calculator-v2.html"
+with open(file_path, "w") as f:
+    f.write(html_code)
+
+file_path
